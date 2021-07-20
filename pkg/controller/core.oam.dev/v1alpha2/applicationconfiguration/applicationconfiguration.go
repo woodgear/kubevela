@@ -317,11 +317,13 @@ func (r *OAMApplicationReconciler) ACReconcile(ctx context.Context, ac *v1alpha2
 		"workloads", strconv.Itoa(len(workloads))))
 
 	applyOpts := []apply.ApplyOption{apply.MustBeControllableBy(ac.GetUID()), applyOnceOnly(ac, r.applyOnceOnlyMode)}
-	if err := r.workloads.Apply(ctx, ac.Status.Workloads, workloads, applyOpts...); err != nil {
-		klog.InfoS("Cannot apply workload", "err", err)
-		r.record.Event(ac, event.Warning(reasonCannotApplyComponents, err))
-		ac.SetConditions(v1alpha1.ReconcileError(errors.Wrap(err, errApplyComponents)))
-		return reconcile.Result{}
+	if len(ac.status.Workloads) != 0 {
+		if err := r.workloads.Apply(ctx, ac.Status.Workloads, workloads, applyOpts...); err != nil {
+			klog.InfoS("Cannot apply workload", "err", err)
+			r.record.Event(ac, event.Warning(reasonCannotApplyComponents, err))
+			ac.SetConditions(v1alpha1.ReconcileError(errors.Wrap(err, errApplyComponents)))
+			return reconcile.Result{}
+		}
 	}
 	// only change the status after the apply succeeds
 	// TODO: take into account the templating object may not be applied if there are dependencies
